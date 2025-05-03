@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>heart particles</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #000;
+        font-family: 'Montserrat', sans-serif;
+        color: white;
+      }
+
+      #c {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        display: none;
+      }
+
+      #message {
+        position: fixed;
+        top: 20%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #ff69b4;
+        font-size: 32px;
+        font-weight: 600;
+        text-align: center;
+        z-index: 100;
+        display: none;
+        opacity: 0;
+        transition: all 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        white-space: nowrap;
+        letter-spacing: 1px;
+        text-shadow: 
+          0 0 10px rgba(255, 105, 180, 0.5),
+          0 0 20px rgba(255, 105, 180, 0.3),
+          0 0 30px rgba(255, 105, 180, 0.2);
+        background: linear-gradient(45deg, #ff69b4, #ff1493);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0 0 15px rgba(255, 105, 180, 0.5));
+      }
+
+      #message.visible {
+        opacity: 1;
+        animation: softGlow 3s ease-in-out infinite;
+      }
+
+      @keyframes softGlow {
+        0%, 100% {
+          filter: drop-shadow(0 0 15px rgba(255, 105, 180, 0.5));
+          transform: translate(-50%, -50%) scale(1);
+        }
+        50% {
+          filter: drop-shadow(0 0 25px rgba(255, 105, 180, 0.7));
+          transform: translate(-50%, -50%) scale(1.02);
+        }
+      }
+
+      #message .emoji {
+        display: inline-block;
+        margin-left: 10px;
+        color: white;
+        text-shadow: 
+          0 0 10px rgba(255, 255, 255, 0.8),
+          0 0 20px rgba(255, 255, 255, 0.5),
+          0 0 30px rgba(255, 255, 255, 0.3);
+        filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.5));
+        -webkit-text-fill-color: white;
+        background: none;
+      }
+
+      #toggle-fullscreen {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #ff69b4;
+        border: 2px solid #ff69b4;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        z-index: 100;
+        backdrop-filter: blur(5px);
+        display: none;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        box-shadow: 0 0 20px rgba(255, 105, 180, 0.3);
+        transition: all 0.3s ease;
+      }
+
+      #toggle-fullscreen:hover {
+        background: rgba(255, 105, 180, 0.2);
+        box-shadow: 0 0 30px rgba(255, 105, 180, 0.5);
+        transform: translateY(-2px);
+      }
+
+      #start-button {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(45deg, #ff69b4, #ff1493);
+        color: white;
+        border: none;
+        padding: 25px 50px;
+        border-radius: 15px;
+        cursor: pointer;
+        font-size: 32px;
+        font-weight: 600;
+        z-index: 100;
+        backdrop-filter: blur(5px);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        text-transform: uppercase;
+        letter-spacing: 4px;
+        box-shadow: 
+          0 0 20px rgba(255, 105, 180, 0.3),
+          0 0 40px rgba(255, 105, 180, 0.2);
+      }
+
+      #start-button:hover {
+        transform: translate(-50%, -50%) scale(1.1);
+        box-shadow: 
+          0 0 30px rgba(255, 105, 180, 0.4),
+          0 0 60px rgba(255, 105, 180, 0.3);
+      }
+
+      #start-button:active {
+        transform: translate(-50%, -50%) scale(0.95);
+        box-shadow: 
+          0 0 15px rgba(255, 105, 180, 0.3),
+          0 0 30px rgba(255, 105, 180, 0.2);
+      }
+
+      @media (max-width: 768px) {
+        #message {
+          font-size: 24px;
+          width: 90%;
+          white-space: normal;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="message">Не грусти, у тебя все получится <span class="emoji">🤗</span></div>
+    <button id="start-button">BUP</button>
+    <button id="toggle-fullscreen">Full Screen</button>
+    <canvas id="c"></canvas>
+
+    <script>
+      // Configuration
+      const config = {
+          particleCount: 32,
+          speed: 1,
+          colorScheme: 'red',
+          mouseInfluence: 0,
+          showHeartOutline: true,
+          particleSize: 10
+      };
+
+      // Canvas setup
+      const canvas = document.getElementById('c');
+      const ctx = canvas.getContext('2d');
+      let canvasWidth = canvas.width = window.innerWidth;
+      let canvasHeight = canvas.height = window.innerHeight;
+
+      // Animation state
+      let trails = [];
+      let heartPath = [];
+      let animationRunning = false;
+
+      // Initialize heart path points
+      function initHeartPath() {
+          heartPath = [];
+          const PI2 = 6.28318;
+          const steps = Math.max(32, config.particleCount);
+          
+          for (let i = 0; i < steps; i++) {
+              const t = (i / steps) * PI2;
+              heartPath.push([
+                  canvasWidth/2 + 180 * Math.pow(Math.sin(t), 3),
+                  canvasHeight/2 + 10 * (-(15 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t)))
+              ]);
+          }
+      }
+
+      // Initialize particles
+      function initParticles() {
+          trails = [];
+          if (heartPath.length === 0) initHeartPath();
+
+          for (let i = 0; i < config.particleCount; i++) {
+              const particles = [];
+              const x = Math.random() * canvasWidth;
+              const y = Math.random() * canvasHeight;
+
+              for (let k = 0; k < config.particleCount; k++) {
+                  const hue = Math.random() * 20 + 350; // Red color range
+                  const saturation = Math.random() * 40 + 60;
+                  const brightness = Math.random() * 60 + 20;
+
+                  particles.push({
+                      x, y,
+                      velX: 0, velY: 0,
+                      radius: ((1 - k/config.particleCount) + 1) * config.particleSize/2,
+                      speed: Math.random() + 1,
+                      targetIndex: Math.floor(Math.random() * heartPath.length),
+                      direction: i % 2 * 2 - 1,
+                      friction: Math.random() * 0.2 + 0.7,
+                      color: `hsla(${hue},${saturation}%,${brightness}%,0.1)`
+                  });
+              }
+              trails.push(particles);
+          }
+      }
+
+      // Render a single particle
+      function renderParticle(particle) {
+          ctx.fillStyle = particle.color;
+          ctx.beginPath();
+          ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+          ctx.fill();
+      }
+
+      // Main animation loop
+      function animationLoop() {
+          if (!animationRunning) return;
+
+          try {
+              ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+              ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+              trails.forEach(trail => {
+                  if (!trail || !trail.length) return;
+                  
+                  const leader = trail[0];
+                  const target = heartPath[leader.targetIndex % heartPath.length];
+                  if (!target) return;
+
+                  // Move toward target
+                  const dx = leader.x - target[0];
+                  const dy = leader.y - target[1];
+                  const dist = Math.sqrt(dx*dx + dy*dy);
+
+                  if (dist < 10) {
+                      if (Math.random() > 0.95) {
+                          leader.targetIndex = Math.floor(Math.random() * heartPath.length);
+                      } else {
+                          if (Math.random() > 0.99) leader.direction *= -1;
+                          leader.targetIndex += leader.direction;
+                          leader.targetIndex = (leader.targetIndex + heartPath.length) % heartPath.length;
+                      }
+                  }
+
+                  // Update physics
+                  leader.velX += -dx/dist * leader.speed * config.speed;
+                  leader.velY += -dy/dist * leader.speed * config.speed;
+                  leader.x += leader.velX;
+                  leader.y += leader.velY;
+                  leader.velX *= leader.friction;
+                  leader.velY *= leader.friction;
+
+                  // Render trail
+                  renderParticle(leader);
+                  for (let k = 1; k < trail.length; k++) {
+                      trail[k].x -= (trail[k].x - trail[k-1].x) * 0.7;
+                      trail[k].y -= (trail[k].y - trail[k-1].y) * 0.7;
+                      renderParticle(trail[k]);
+                  }
+              });
+          } catch (error) {
+              console.error("Animation error:", error);
+          }
+
+          requestAnimationFrame(animationLoop);
+      }
+
+      // Setup controls
+      function setupControls() {
+          const startButton = document.getElementById('start-button');
+          const fullscreenButton = document.getElementById('toggle-fullscreen');
+          const canvas = document.getElementById('c');
+          const message = document.getElementById('message');
+
+          startButton.addEventListener('click', () => {
+              startButton.style.display = 'none';
+              canvas.style.display = 'block';
+              fullscreenButton.style.display = 'block';
+              message.style.display = 'block';
+              setTimeout(() => {
+                  message.classList.add('visible');
+              }, 100);
+              animationRunning = true;
+              initHeartPath();
+              initParticles();
+              animationLoop();
+          });
+
+          fullscreenButton.addEventListener('click', () => {
+              if (!document.fullscreenElement) {
+                  document.documentElement.requestFullscreen();
+              } else {
+                  if (document.exitFullscreen) {
+                      document.exitFullscreen();
+                  }
+              }
+          });
+
+          // Window resize
+          window.addEventListener('resize', () => {
+              canvasWidth = canvas.width = window.innerWidth;
+              canvasHeight = canvas.height = window.innerHeight;
+              initHeartPath();
+          });
+      }
+
+      // Initialize everything
+      function init() {
+          setupControls();
+      }
+
+      // Start the initialization
+      init();
+    </script>
+  </body>
+</html>
